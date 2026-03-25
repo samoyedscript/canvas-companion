@@ -1,0 +1,9 @@
+[
+  {
+    "id": 5001,
+    "title": "Welcome to CS101",
+    "message": "<p>Welcome to the course! Please review the syllabus.</p>",
+    "posted_at": "2026-03-20T10:00:00Z",
+    "context_code": "course_101"
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1001,
+    "name": "Homework 1",
+    "description": "<p>Complete exercises 1-5</p>",
+    "due_at": "2026-04-01T23:59:00Z",
+    "html_url": "https://canvas.test.edu/courses/101/assignments/1001",
+    "points_possible": 100.0
+  },
+  {
+    "id": 1002,
+    "name": "Midterm Project",
+    "description": "<p>Build a simple web app</p>",
+    "due_at": "2026-04-15T23:59:00Z",
+    "html_url": "https://canvas.test.edu/courses/101/assignments/1002",
+    "points_possible": 200.0
+  }
+]

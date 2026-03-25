@@ -1,0 +1,16 @@
+[
+  {
+    "id": 101,
+    "name": "Introduction to Computer Science",
+    "course_code": "CS101",
+    "enrollment_term_id": 1,
+    "workflow_state": "available"
+  },
+  {
+    "id": 202,
+    "name": "Data Structures and Algorithms",
+    "course_code": "CS202",
+    "enrollment_term_id": 1,
+    "workflow_state": "available"
+  }
+]
