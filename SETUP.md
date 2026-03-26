@@ -69,7 +69,7 @@ On first run, a browser window will open for you to authorise the app with your 
 2. Send `/newbot` and follow the prompts:
    - Choose a display name (e.g. "Canvas Companion").
    - Choose a username ending in `bot` (e.g. `my_canvas_companion_bot`).
-3. BotFather will reply with a **bot token** in the format `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`. Copy this token.
+3. BotFather will reply with a **bot token**. Copy it somewhere safe and do not commit it.
 
 **Getting your Chat ID:**
 
@@ -101,7 +101,7 @@ CC_GOOGLE_TOKEN_PATH=credentials/token.json
 CC_DRIVE_ROOT_FOLDER_NAME=Canvas Companion       # Name of the root folder in your Drive
 
 # Telegram
-CC_TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234...      # Token from step 4
+CC_TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here # Token from step 4
 CC_TELEGRAM_CHAT_ID=123456789                     # Chat ID from step 4
 
 # Scheduler

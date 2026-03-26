@@ -8,8 +8,10 @@ build/
 *.db-shm
 *.db-wal
 .env
-credentials/token.json
-credentials/credentials.json
+.env.*
+!.env.example
+credentials/*
+!credentials/.gitkeep
 .venv/
 .mypy_cache/
 .pytest_cache/
