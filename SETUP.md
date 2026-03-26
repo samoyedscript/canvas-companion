@@ -112,9 +112,53 @@ CC_DB_PATH=canvas_companion.db
 
 # Logging
 CC_LOG_LEVEL=INFO
+
+# Gemini API (optional, required for /prep)
+CC_GEMINI_API_KEY=your_gemini_api_key_here
+CC_GEMINI_MODEL=gemini-2.5-flash
 ```
 
-## 6. Verify Setup
+## 6. Gemini API Setup (for /prep)
+
+The `/prep` study pack feature uses Google's Gemini API for AI-powered study material generation.
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey).
+2. Click **Create API Key**.
+3. Select your existing Google Cloud project (the same one used for Drive).
+4. Copy the API key.
+5. Add to your `.env` file:
+
+```env
+CC_GEMINI_API_KEY=your_key_here
+CC_GEMINI_MODEL=gemini-2.5-flash
+```
+
+The default model `gemini-2.5-flash` offers a good balance of speed and quality. You can also use `gemini-2.5-pro` for higher quality at the cost of slower generation.
+
+## 7. Google Calendar API Setup (for /prep)
+
+The `/prep` feature can optionally create Google Calendar events for your study sessions.
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Select your existing project (the same one used for Drive).
+3. Navigate to **APIs & Services** > **Library**.
+4. Search for **Google Calendar API** and click **Enable**.
+5. Go to **APIs & Services** > **OAuth consent screen**.
+   - Click **Edit App**.
+   - On the **Scopes** step, add: `https://www.googleapis.com/auth/calendar.events`
+   - Save changes.
+6. **Re-authorize the app**: Delete `credentials/token.json` and run `canvas-companion doctor`.
+   A browser window will open for you to re-authorize with the new Calendar scope.
+
+```bash
+rm credentials/token.json
+canvas-companion doctor
+```
+
+> **Note:** If you skip this step, the `/prep` feature will still work for generating study packs,
+> but the "Add to Calendar" button will not appear.
+
+## 8. Verify Setup
 
 Run the built-in diagnostic tool to check that everything is configured correctly:
 
@@ -122,4 +166,4 @@ Run the built-in diagnostic tool to check that everything is configured correctl
 canvas-companion doctor
 ```
 
-This will test your configuration, Canvas API connection, Google Drive credentials, and Telegram bot connectivity.
+This will test your configuration, Canvas API connection, Google Drive credentials, Telegram bot connectivity, Gemini API access, and Google Calendar connectivity.

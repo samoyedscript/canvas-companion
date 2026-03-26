@@ -45,3 +45,29 @@ def test_settings_custom_defaults(monkeypatch):
     s = Settings()  # type: ignore[call-arg]
     assert s.sync_interval_minutes == 60
     assert s.log_level == "DEBUG"
+
+
+def test_gemini_settings_optional(monkeypatch):
+    """Gemini settings should be optional with sensible defaults."""
+    monkeypatch.setenv("CC_CANVAS_BASE_URL", "https://canvas.example.com")
+    monkeypatch.setenv("CC_CANVAS_API_TOKEN", "tok")
+    monkeypatch.setenv("CC_TELEGRAM_BOT_TOKEN", "bot:x")
+    monkeypatch.setenv("CC_TELEGRAM_CHAT_ID", "1")
+
+    s = Settings()  # type: ignore[call-arg]
+    assert s.gemini_api_key is None
+    assert s.gemini_model == "gemini-2.5-flash"
+
+
+def test_gemini_settings_loaded(monkeypatch):
+    """Gemini settings should load when provided."""
+    monkeypatch.setenv("CC_CANVAS_BASE_URL", "https://canvas.example.com")
+    monkeypatch.setenv("CC_CANVAS_API_TOKEN", "tok")
+    monkeypatch.setenv("CC_TELEGRAM_BOT_TOKEN", "bot:x")
+    monkeypatch.setenv("CC_TELEGRAM_CHAT_ID", "1")
+    monkeypatch.setenv("CC_GEMINI_API_KEY", "gemini-key-123")
+    monkeypatch.setenv("CC_GEMINI_MODEL", "gemini-2.5-pro")
+
+    s = Settings()  # type: ignore[call-arg]
+    assert s.gemini_api_key.get_secret_value() == "gemini-key-123"
+    assert s.gemini_model == "gemini-2.5-pro"

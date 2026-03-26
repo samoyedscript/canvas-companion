@@ -9,6 +9,9 @@ A monitoring and automation tool for Canvas LMS that syncs course files to Googl
 - **Telegram Notifications** — Sends alerts for new assignments, due date changes, new announcements, and synced files.
 - **Deadline Reminders** — Escalating urgency levels (Normal, Upcoming, Urgent, Critical) as deadlines approach.
 - **Interactive Telegram Bot** — Browse courses, check outstanding assignments, trigger manual syncs, and adjust settings directly from Telegram.
+- **AI Study Pack Generation** — `/prep` uses Google Gemini to generate summaries and quiz prep from your course materials, with a critique pass for quality.
+- **Google Calendar Integration** — Add study sessions or quiz schedules to Google Calendar directly from the bot.
+- **PDF Full-Text Search** — Course PDFs are indexed and searchable when generating study packs.
 - **Course Filtering** — Exclude courses you don't want to track.
 - **Configurable Sync Interval** — Set the sync frequency from 5 minutes to 1 week, adjustable at runtime via the bot.
 - **Academic Calendar** — Displays the current NUS semester week in the bot.
@@ -59,6 +62,31 @@ This will:
 | `/courses` | Browse and filter enrolled courses |
 | `/outstanding` | Check unsubmitted assignments with urgency indicators |
 | `/frequency` | Change the sync interval |
+| `/prep` | Generate an AI-powered study pack from course materials |
+
+### Study Pack Generation (`/prep`)
+
+The `/prep` command walks you through a multi-step conversation to generate a study pack:
+
+1. Select a course.
+2. Choose **Material Summary** or **Quiz Prep**.
+3. Enter the name of the course file to base the pack on.
+4. Review the generated study pack.
+5. Optionally add a calendar event.
+
+**Scheduling a calendar event:**
+
+When prompted for a date and time, you can include a duration:
+
+```
+28 Mar 2026 2pm, 1 hour
+28 Mar 2026 14:00-16:00
+tomorrow 3pm
+```
+
+If no duration is given, the event defaults to 2 hours.
+
+> Requires `CC_GEMINI_API_KEY` in your `.env`. See [SETUP.md](SETUP.md) for configuration.
 
 ## Academic Calendar
 

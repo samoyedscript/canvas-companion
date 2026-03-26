@@ -56,8 +56,8 @@ def test_create_bot_application_returns_app(bot_deps):
 
 def test_create_bot_application_registers_handlers(bot_deps):
     app = create_bot_application(**bot_deps)
-    # Should have 6 command handlers + 1 callback query handler
-    assert len(app.handlers[0]) == 7
+    # Should have 6 command handlers + 1 conversation handler (/prep) + 1 callback query handler
+    assert len(app.handlers[0]) == 8
 
 
 def test_bot_data_stores_dependencies(bot_deps):

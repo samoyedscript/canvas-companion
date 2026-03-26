@@ -18,6 +18,8 @@ def test_init_schema_creates_tables(db_conn):
         "tracked_announcements",
         "notification_history",
         "sync_runs",
+        "file_chunks",
+        "prep_sessions",
     }
     assert expected.issubset(tables)
 

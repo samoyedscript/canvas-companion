@@ -18,6 +18,8 @@ dependencies = [
     "typer>=0.12",
     "pydantic>=2.5",
     "pydantic-settings>=2.1",
+    "google-genai>=1.0",
+    "pymupdf>=1.25",
 ]
 
 [project.optional-dependencies]

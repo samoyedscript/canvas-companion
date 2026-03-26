@@ -59,7 +59,24 @@ def _build_components(settings):
         chat_id=settings.telegram_chat_id,
     )
 
-    return conn, canvas, drive, notifier
+    gemini = None
+    if settings.gemini_api_key:
+        from canvas_companion.gemini_service import GeminiService
+
+        gemini = GeminiService(
+            api_key=settings.gemini_api_key.get_secret_value(),
+            model=settings.gemini_model,
+        )
+
+    calendar = None
+    try:
+        from canvas_companion.calendar_service import CalendarService
+
+        calendar = CalendarService(drive.credentials)
+    except Exception as e:
+        logging.getLogger(__name__).warning("Calendar service unavailable: %s", e)
+
+    return conn, canvas, drive, notifier, gemini, calendar
 
 
 @app.command()
@@ -76,7 +93,7 @@ def sync() -> None:
 
     from canvas_companion.sync_engine import run_sync
 
-    conn, canvas, drive, notifier = _build_components(settings)
+    conn, canvas, drive, notifier, _gemini, _calendar = _build_components(settings)
 
     async def _run():
         try:
@@ -111,7 +128,7 @@ def run() -> None:
     from canvas_companion.sync_engine import run_sync
     from canvas_companion.telegram_bot import create_bot_application
 
-    conn, canvas, drive, notifier = _build_components(settings)
+    conn, canvas, drive, notifier, gemini, calendar = _build_components(settings)
 
     async def do_sync():
         return await run_sync(canvas, drive, notifier, conn)
@@ -132,6 +149,8 @@ def run() -> None:
         conn=conn,
         canvas=canvas,
         scheduler=scheduler,
+        gemini=gemini,
+        calendar=calendar,
     )
 
     async def _main():
@@ -182,7 +201,7 @@ def doctor() -> None:
     typer.echo("Canvas Companion — Doctor\n")
 
     # 1. Config
-    typer.echo("[1/4] Configuration...")
+    typer.echo("[1/6] Configuration...")
     try:
         settings = _load_settings()
         typer.echo("  PASS: All required settings loaded")
@@ -192,7 +211,7 @@ def doctor() -> None:
     _setup_logging("WARNING")
 
     # 2. Canvas API
-    typer.echo("[2/4] Canvas API...")
+    typer.echo("[2/6] Canvas API...")
     import httpx
 
     try:
@@ -208,7 +227,8 @@ def doctor() -> None:
         typer.echo(f"  FAIL: {e}", err=True)
 
     # 3. Google Drive
-    typer.echo("[3/4] Google Drive...")
+    typer.echo("[3/6] Google Drive...")
+    drive = None
     try:
         from canvas_companion.drive_sync import DriveSync
 
@@ -223,7 +243,7 @@ def doctor() -> None:
         typer.echo(f"  FAIL: {e}", err=True)
 
     # 4. Telegram
-    typer.echo("[4/4] Telegram...")
+    typer.echo("[4/6] Telegram...")
     import asyncio
 
     from telegram import Bot
@@ -238,5 +258,46 @@ def doctor() -> None:
         typer.echo(f"  PASS: Bot @{me.username} is reachable")
     except Exception as e:
         typer.echo(f"  FAIL: {e}", err=True)
+
+    # 5. Gemini API
+    typer.echo("[5/6] Gemini API...")
+    if settings.gemini_api_key:
+        try:
+            from canvas_companion.gemini_service import GeminiService
+
+            gemini = GeminiService(
+                api_key=settings.gemini_api_key.get_secret_value(),
+                model=settings.gemini_model,
+            )
+            ok = asyncio.run(gemini.check_connectivity())
+            if ok:
+                typer.echo(f"  PASS: Gemini ({settings.gemini_model}) is reachable")
+            else:
+                typer.echo("  FAIL: Gemini returned unexpected response", err=True)
+        except Exception as e:
+            typer.echo(f"  FAIL: {e}", err=True)
+    else:
+        typer.echo("  SKIP: CC_GEMINI_API_KEY not set (optional, needed for /prep)")
+
+    # 6. Google Calendar
+    typer.echo("[6/6] Google Calendar...")
+    if drive is not None:
+        try:
+            from canvas_companion.calendar_service import CalendarService
+
+            cal = CalendarService(drive.credentials)
+            if cal.check_connectivity():
+                typer.echo("  PASS: Calendar API is accessible")
+            else:
+                typer.echo("  FAIL: Calendar API returned error", err=True)
+        except Exception as e:
+            typer.echo(f"  FAIL: {e}", err=True)
+            typer.echo(
+                "  HINT: Enable the Google Calendar API and add calendar.events scope.\n"
+                "  Then delete credentials/token.json and re-run doctor to re-authorize.",
+                err=True,
+            )
+    else:
+        typer.echo("  SKIP: Google Drive not configured (Calendar requires Drive OAuth)")
 
     typer.echo("\nDone.")

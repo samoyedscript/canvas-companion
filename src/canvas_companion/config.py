@@ -32,5 +32,9 @@ class Settings(BaseSettings):
     # Database
     db_path: Path = Path("canvas_companion.db")
 
+    # Gemini (required for /prep)
+    gemini_api_key: SecretStr | None = None
+    gemini_model: str = "gemini-2.5-flash"
+
     # Logging
     log_level: str = "INFO"

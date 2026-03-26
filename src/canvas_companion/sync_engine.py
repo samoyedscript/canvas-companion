@@ -92,6 +92,24 @@ async def _process_assignment(
     return False
 
 
+def _is_pdf(file: CanvasFile) -> bool:
+    return (file.content_type == "application/pdf"
+            or file.display_name.lower().endswith(".pdf"))
+
+
+def _index_pdf(file_id: int, course_id: int, content: bytes,
+               conn: sqlite3.Connection) -> None:
+    """Extract text from a PDF and store chunks in FTS."""
+    from canvas_companion.pdf_extract import extract_and_chunk
+    try:
+        chunks = extract_and_chunk(content)
+        if chunks:
+            db.upsert_file_chunks(conn, file_id, course_id, chunks)
+            logger.info("Indexed %d chunks from file %d", len(chunks), file_id)
+    except Exception as e:
+        logger.warning("PDF text extraction failed for file %d: %s", file_id, e)
+
+
 async def _process_file(
     file: CanvasFile,
     course_name: str,
@@ -114,6 +132,8 @@ async def _process_file(
             conn, file.id, file.course_id, file.display_name,
             updated_at_str, drive_id, link,
         )
+        if _is_pdf(file):
+            _index_pdf(file.id, file.course_id, content, conn)
         await notifier.notify_file_synced(file, course_name, link, is_update=False)
         return 1, 0, 1
 
@@ -126,8 +146,18 @@ async def _process_file(
             conn, file.id, file.course_id, file.display_name,
             updated_at_str, drive_id, link,
         )
+        if _is_pdf(file):
+            _index_pdf(file.id, file.course_id, content, conn)
         await notifier.notify_file_synced(file, course_name, link, is_update=True)
         return 0, 1, 1
+
+    # File unchanged — backfill FTS if needed
+    if _is_pdf(file) and not db.has_file_chunks(conn, file.id):
+        try:
+            content = await canvas.download_file(file.url)
+            _index_pdf(file.id, file.course_id, content, conn)
+        except Exception as e:
+            logger.warning("Backfill indexing failed for '%s': %s", file.display_name, e)
 
     return 0, 0, 0
 

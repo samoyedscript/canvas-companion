@@ -81,3 +81,18 @@ class SyncResult(BaseModel):
     files_updated: int
     notifications_sent: int
     errors: list[str]
+
+
+class PrepType(str, Enum):
+    MATERIAL_SUMMARY = "material_summary"
+    QUIZ_PREP = "quiz_prep"
+
+
+class PrepRequest(BaseModel):
+    course_id: int
+    course_name: str
+    course_code: str
+    prep_type: PrepType
+    file_display_name: str
+    quiz_name: str | None = None
+    event_datetime: datetime | None = None

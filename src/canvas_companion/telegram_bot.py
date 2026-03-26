@@ -6,7 +6,7 @@ import asyncio
 import logging
 import sqlite3
 from collections.abc import Callable, Coroutine
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -18,6 +18,8 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+
+from dateutil import parser as _dateutil_parser
 
 from canvas_companion import db
 from canvas_companion.canvas_api import CanvasClient
@@ -52,6 +54,24 @@ def _format_interval(minutes: int) -> str:
 
 def _back_home_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton("<< Home", callback_data="home")]])
+
+
+def _format_sync_time(iso_str: str) -> str:
+    gmt8 = timezone(timedelta(hours=8))
+    return _dateutil_parser.parse(iso_str).astimezone(gmt8).strftime("%Y-%m-%d %H:%M")
+
+
+def _format_status_text(last_run: dict) -> str:
+    error_count = len(last_run.get("errors", []))
+    return (
+        f"Last sync: {_format_sync_time(last_run['started_at'])}\n"
+        f"Status: {last_run['status']}\n"
+        f"Courses: {last_run['courses_synced']}\n"
+        f"Files uploaded: {last_run['files_uploaded']}\n"
+        f"Files updated: {last_run['files_updated']}\n"
+        f"Notifications: {last_run['notifications']}\n"
+        f"Errors: {error_count}"
+    )
 
 
 def _format_sync_result(result) -> str:
@@ -159,11 +179,14 @@ def create_bot_application(
     conn: sqlite3.Connection,
     canvas: CanvasClient,
     scheduler: SyncScheduler,
+    gemini: object | None = None,
+    calendar: object | None = None,
 ) -> Application:
     """Build and configure the Telegram bot Application."""
     async def post_init(application: Application) -> None:
         await application.bot.set_my_commands([
             ("start", "Home screen with academic calendar"),
+            ("prep", "Generate a study prep pack"),
             ("courses", "Browse your courses"),
             ("outstanding", "Check unsubmitted assignments"),
             ("frequency", "Change sync interval"),
@@ -185,6 +208,7 @@ def create_bot_application(
 
     def _home_keyboard() -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup([
+            [InlineKeyboardButton("Study Prep", callback_data="prep_start")],
             [InlineKeyboardButton("Courses", callback_data="courses:0")],
             [InlineKeyboardButton("Outstanding Assignments", callback_data="outstanding")],
             [InlineKeyboardButton("Sync Now", callback_data="do_sync")],
@@ -303,16 +327,7 @@ def create_bot_application(
         if last_run is None:
             await update.message.reply_text("No sync has been run yet.")  # type: ignore[union-attr]
             return
-        error_count = len(last_run.get("errors", []))
-        await update.message.reply_text(  # type: ignore[union-attr]
-            f"Last sync: {last_run['started_at']}\n"
-            f"Status: {last_run['status']}\n"
-            f"Courses: {last_run['courses_synced']}\n"
-            f"Files uploaded: {last_run['files_uploaded']}\n"
-            f"Files updated: {last_run['files_updated']}\n"
-            f"Notifications: {last_run['notifications']}\n"
-            f"Errors: {error_count}"
-        )
+        await update.message.reply_text(_format_status_text(last_run))  # type: ignore[union-attr]
 
     async def cmd_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text, kb = _courses_keyboard()
@@ -423,19 +438,7 @@ def create_bot_application(
 
             elif data == "status":
                 last_run = status_callback()
-                if last_run is None:
-                    text = "No sync has been run yet."
-                else:
-                    error_count = len(last_run.get("errors", []))
-                    text = (
-                        f"Last sync: {last_run['started_at']}\n"
-                        f"Status: {last_run['status']}\n"
-                        f"Courses: {last_run['courses_synced']}\n"
-                        f"Files uploaded: {last_run['files_uploaded']}\n"
-                        f"Files updated: {last_run['files_updated']}\n"
-                        f"Notifications: {last_run['notifications']}\n"
-                        f"Errors: {error_count}"
-                    )
+                text = "No sync has been run yet." if last_run is None else _format_status_text(last_run)
                 await query.edit_message_text(text, reply_markup=_back_home_keyboard())
 
             elif data == "outstanding":
@@ -465,6 +468,13 @@ def create_bot_application(
     app.add_handler(CommandHandler("courses", cmd_courses, filters=chat_filter))
     app.add_handler(CommandHandler("frequency", cmd_frequency, filters=chat_filter))
     app.add_handler(CommandHandler("outstanding", cmd_outstanding, filters=chat_filter))
+
+    # /prep ConversationHandler — must be registered before the global callback handler
+    from canvas_companion.prep_handler import create_prep_conversation
+
+    prep_conv = create_prep_conversation(chat_filter, conn, gemini, calendar)
+    app.add_handler(prep_conv)
+
     app.add_handler(CallbackQueryHandler(handle_callback))
 
     return app

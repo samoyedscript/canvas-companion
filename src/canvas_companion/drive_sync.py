@@ -14,7 +14,10 @@ from googleapiclient.http import MediaIoBaseUpload
 
 logger = logging.getLogger(__name__)
 
-SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+SCOPES = [
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/calendar.events",
+]
 _FOLDER_MIME = "application/vnd.google-apps.folder"
 
 
@@ -32,6 +35,11 @@ class DriveSync:
         self._service = build("drive", "v3", credentials=self._creds)
         self._root_folder_id: str | None = None
 
+    @property
+    def credentials(self) -> Credentials:
+        """Expose OAuth credentials for reuse by other Google API services."""
+        return self._creds
+
     def _load_or_refresh_credentials(self) -> Credentials:
         """Load token.json if valid; refresh if expired; run OAuth flow if absent."""
         creds: Credentials | None = None
@@ -40,7 +48,14 @@ class DriveSync:
             creds = Credentials.from_authorized_user_file(str(self._token_path), SCOPES)
 
         if creds and creds.valid:
-            return creds
+            # Check if all required scopes are present
+            if creds.scopes and set(SCOPES).issubset(set(creds.scopes)):
+                return creds
+            logger.info(
+                "Re-authorization required: token missing scopes %s",
+                set(SCOPES) - set(creds.scopes or []),
+            )
+            creds = None  # Fall through to OAuth flow
 
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
